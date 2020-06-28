@@ -12,14 +12,11 @@ import requests
 from flask import Flask
 app = Flask(__name__)
 
-from instagram_utils import *
-
 # Make the WSGI interface available at the top level so wfastcgi can get it.
 wsgi_app = app.wsgi_app
 
-
-def get_insta_post(id: str):
-    api_url = f'https://instagram.com/tv/{id}'
+def get_insta_js(api_url: str):
+    
     soup = bs4.BeautifulSoup(requests.get(api_url).content, 'html.parser')
 
     raw_text = soup.body.script.string.strip()
@@ -29,7 +26,21 @@ def get_insta_post(id: str):
     end = raw_text.rfind(';')
 
     js = json.loads(raw_text[start + 1:end])
+    return js
+
+
+def get_insta_post(id: str):
+    api_url = f'https://instagram.com/tv/{id}'
+
+    js = get_insta_js(api_url)
     return js['entry_data']['PostPage'][0]['graphql']['shortcode_media']
+
+
+def get_insta_user(id: str):
+    api_url = f'https://instagram.com/{id}'
+
+    js = get_insta_js(api_url)
+    return js['entry_data']['ProfilePage'][0]['graphql']['user']
 
 
 @app.route('/')
@@ -41,9 +52,14 @@ def hello():
 def hello1():
     return "goodbye world"
 
-@app.route('/instagram/<id>')
+@app.route('/instagram/tv/<id>')
+@app.route('/instagram/p/<id>')
 def insta_raw(id: str):
     return get_insta_post(id)
+
+@app.route('/instagram/<id>')
+def insta_user(id: str):
+    return get_insta_user(id)
 
 @app.route('/instagram')
 def insta_test():
